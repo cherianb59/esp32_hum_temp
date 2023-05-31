@@ -8,13 +8,16 @@
 #include <HTTPClient.h>
 #include "DHT.h"
 #include <LiquidCrystal_I2C.h>
+#include <WiFiManager.h>
 
+//WiFiManager, Local intialization. Once its business is done, there is no need to keep it around
+WiFiManager wm;
 
 const char* ssid = "";
 const char* password = "";
 
 //Your Domain name with URL path or IP address with path
-const char* serverName = "";
+const char* serverName = "http://api.dsssmble.cyou/kk";
 
 // the following variables are unsigned longs because the time, measured in
 // milliseconds, will quickly become a bigger number than can be stored in an int.
@@ -23,7 +26,7 @@ unsigned long timerDelay = 60000;
 
 #define DHTPIN 4     // Digital pin connected to the DHT sensor
 
-#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
+#define DHTTYPE DHT11      // DHT 22  (AM2302), AM2321
 
 // Initialize DHT sensor.
 // Note that older versions of this library took an optional third parameter to
@@ -41,6 +44,28 @@ int lcdRows = 2;
 // set LCD address, number of columns and rows
 // if you don't know your display address, run an I2C scanner sketch
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);  
+
+struct Button {
+	const uint8_t PIN;
+	uint32_t numberKeyPresses;
+	bool pressed;
+};
+
+Button button1 = {18, 0, false};
+
+//variables to keep track of the timing of recent interrupts
+unsigned long button_time = 0;  
+unsigned long last_button_time = 0; 
+
+void IRAM_ATTR isr() {
+  button_time = millis();
+  if (button_time - last_button_time > 250)
+  {
+          button1.numberKeyPresses++;
+          button1.pressed = true;
+        last_button_time = button_time;
+  }
+}
 
 
 void setup() {
@@ -62,12 +87,26 @@ void setup() {
   lcd.init();
   // turn on LCD backlight                      
   lcd.backlight();  
+  lcd.clear();
+  // set cursor to first column, first row
+  lcd.setCursor(0, 0);
+  // print message
+  lcd.print("Temp:");
+  lcd.setCursor(0, 1);
+  // print message
+  lcd.print("Hum: ");
 
-
+	pinMode(button1.PIN, INPUT_PULLUP);
+	attachInterrupt(button1.PIN, isr, FALLING);
 }
 
 void loop() {
 
+	
+  if (button1.pressed) {
+		Serial.printf("Button has been pressed %u times\n", button1.numberKeyPresses);
+		button1.pressed = false;
+	}
 
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
@@ -78,6 +117,15 @@ void loop() {
   // Check if any reads failed and exit early (to try again).
   if (isnan(h) || isnan(t) ) {
     Serial.println(F("Failed to read from DHT sensor!"));
+    // set cursor to first column, first row
+    lcd.setCursor(0, 0);
+    // print message
+    lcd.print("Error");
+    lcd.setCursor(0, 1);
+    // print message
+    lcd.print("Error");
+
+    delay(1000);
     return;
   }
 
@@ -90,7 +138,7 @@ void loop() {
     Serial.print(F("C "));
     Serial.println(" ");
 
-    lcd.clear();
+    //lcd.clear();
     // set cursor to first column, first row
     lcd.setCursor(0, 0);
     // print message
