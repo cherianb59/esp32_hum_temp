@@ -98,6 +98,16 @@ void setup() {
     wifi_count = wifi_count + 1 ; 
     Serial.print(".");
   }
+  if (WiFi.status() != WL_CONNECTED)  {
+    lcd.setCursor(0, 1);
+    lcd.print("WiFi Fail");
+  }
+  else{
+    lcd.setCursor(0, 1);
+    lcd.print("WiFi Good");
+  }
+
+
   Serial.println("");
   Serial.print("Connected to WiFi network with IP Address: ");
   Serial.println(WiFi.localIP());
