@@ -21,8 +21,9 @@ const char* serverName = "http://api.dsssmble.cyou/kk";
 
 // the following variables are unsigned longs because the time, measured in
 // milliseconds, will quickly become a bigger number than can be stored in an int.
-unsigned long lastTime = 0;
-unsigned long timerDelay = 60000;
+
+unsigned long POSTtimerDelay = 60000;
+unsigned long lastPOSTTime = -POSTtimerDelay;
 
 #define DHTPIN 4     // Digital pin connected to the DHT sensor
 
@@ -69,32 +70,40 @@ void IRAM_ATTR isr() {
 
 
 void setup() {
-  Serial.begin(9600);
-  Serial.println(F("DHTxx test!"));
-
-  dht.begin();
-  WiFi.begin(ssid, password);
-  Serial.println("Connecting");
-  while(WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.print("Connected to WiFi network with IP Address: ");
-  Serial.println(WiFi.localIP());
  
   // initialize LCD
   lcd.init();
   // turn on LCD backlight                      
   lcd.backlight();  
   lcd.clear();
-  // set cursor to first column, first row
   lcd.setCursor(0, 0);
-  // print message
-  lcd.print("Temp:");
+  lcd.print("Starting Up");
+
+  Serial.begin(9600);
+  Serial.println(F("DHTxx test!"));
+
+  dht.begin();
   lcd.setCursor(0, 1);
-  // print message
-  lcd.print("Hum: ");
+  lcd.print("DHT ");
+
+  WiFi.begin(ssid, password);
+  Serial.println("WiFi connecting");
+  lcd.setCursor(0, 1);
+  lcd.print("WiFi ");
+
+  int wifi_count = 0  ; 
+  const int wifi_count_max = 10  ; 
+  while( (WiFi.status() != WL_CONNECTED) &&  (wifi_count<wifi_count_max) ) {
+    delay(500);
+    wifi_count = wifi_count + 1 ; 
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to WiFi network with IP Address: ");
+  Serial.println(WiFi.localIP());
+  lcd.setCursor(1, 0);
+  lcd.print("WiFi Connected");
+  lcd.clear();
 
 	pinMode(button1.PIN, INPUT_PULLUP);
 	attachInterrupt(button1.PIN, isr, FALLING);
@@ -125,7 +134,7 @@ void loop() {
     // print message
     lcd.print("Error");
 
-    delay(1000);
+    delay(2000);
     return;
   }
 
@@ -158,7 +167,7 @@ void loop() {
   }
 
   //Send an HTTP POST request every 1 minute
-  if ((millis() - lastTime) > timerDelay) {
+  if ((millis() - lastPOSTTime) > POSTtimerDelay) {
     //Check WiFi connection status
     if(WiFi.status()== WL_CONNECTED){
       WiFiClient client;
@@ -191,7 +200,7 @@ void loop() {
     else {
       Serial.println("WiFi Disconnected");
     }
-    lastTime = millis();
+    lastPOSTTime = millis();
 
   }
   delay(2000);
